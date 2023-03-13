@@ -8,7 +8,9 @@ from flask_swagger import swagger
 from flask_cors import CORS
 from utils import APIException, generate_sitemap
 from admin import setup_admin
-from models import db, User
+
+#importa modelos creados en models
+from models import db, User,Characters
 #from models import Person
 
 app = Flask(__name__)
@@ -37,13 +39,49 @@ def sitemap():
     return generate_sitemap(app)
 
 @app.route('/user', methods=['GET'])
-def handle_hello():
+def get_users():
+    users=User.query.all()
+    #serialize convierte un objeto python en un string,
+    #esta definido en models.py
+    results=[user.serialize() for user in users]
 
     response_body = {
-        "msg": "Hello, this is your GET /user response "
-    }
+        "message": "OK ",
+        "total_records": len(results),
+        "results" :results  }
 
     return jsonify(response_body), 200
+
+@app.route('/user/<int:user_id>', methods=['GET'])
+def get_user(user_id):
+    user=User.query.get(user_id)
+    response_body = {
+        "message": "OK ",
+        "result" : user.serialize() }
+
+    return jsonify(response_body), 200
+
+@app.route('/delete/<int:user_id>', methods=['DELETE'])
+def delete_user(user_id):
+    user=User.query.get(user_id)
+    db.session.delete(user)
+    db.session.commit()
+    response_body = {
+        "message": "user borrado ",
+        "user" : user.id}
+
+    return jsonify(response_body), 200
+
+@app.route('/user', methods=['POST'])
+def create_users():
+    request_body=request.get_json()
+    user=User(email=request_body["email"],
+              password=request_body["password"],
+              is_active=request_body["is_active"])
+    db.session.add(user)
+    db.session.commit()
+
+    return jsonify(request_body), 200
 
 # this only runs if `$ python src/app.py` is executed
 if __name__ == '__main__':
